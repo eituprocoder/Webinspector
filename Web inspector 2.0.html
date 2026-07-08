@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- Added responsive viewport -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Web Inspector Sandbox</title>
+<script>
+    if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('Service Worker registrado correctamente'))
+      .catch(err => console.log('Error al registrar:', err));
+  }
+</script>
+
+<!-- No olvides vincular el manifest en el <head> -->
+<link rel="manifest" href="manifest.json">
+<style>
+    body {
+        margin: 0;
+        font-family: monospace;
+        background: #0f0f0f;
+        color: #00ff9d;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    #topbar {
+        display: flex;
+        flex-wrap: wrap;
+        padding: 10px;
+        background: #111;
+        gap: 10px;
+        border-bottom: 1px solid #222;
+        align-items: center;
+    }
+
+    .top-row {
+        display: flex;
+        width: 100%;
+        gap: 10px;
+    }
+
+    @media (min-width: 600px) {
+        .top-row {
+            width: auto;
+            flex: 1;
+        }
+    }
+
+    input {
+        flex: 1;
+        padding: 8px;
+        background: #000;
+        color: #00ff9d;
+        border: 1px solid #333;
+        outline: none;
+        font-family: monospace;
+        min-width: 120px;
+    }
+
+    button {
+        padding: 8px 12px;
+        background: #00ff9d;
+        color: #000;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        font-family: monospace;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+
+    button:hover {
+        background: #00cc7d;
+        box-shadow: 0 0 8px rgba(0, 255, 157, 0.4);
+    }
+
+    button.secondary {
+        background: #111;
+        color: #00ff9d;
+        border: 1px solid #00ff9d;
+    }
+
+    button.secondary:hover {
+        background: #00ff9d;
+        color: #000;
+    }
+
+    /* Mobile view toggle tabs */
+    #mobile-tabs {
+        display: none;
+        background: #151515;
+        border-bottom: 1px solid #222;
+    }
+
+    #mobile-tabs button {
+        flex: 1;
+        background: transparent;
+        color: #888;
+        border: none;
+        border-bottom: 2px solid transparent;
+        padding: 12px;
+        font-weight: normal;
+    }
+
+    #mobile-tabs button.active {
+        color: #00ff9d;
+        border-bottom: 2px solid #00ff9d;
+        font-weight: bold;
+        background: rgba(0, 255, 157, 0.05);
+    }
+
+    #container {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    #left, #right {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-right: 1px solid #222;
+        position: relative;
+    }
+
+    #right {
+        border-right: none;
+    }
+
+    /* Embedded Ctrl+F Search Bar */
+    #search-bar {
+        display: none;
+        background: #1a1a1a;
+        padding: 8px 12px;
+        border-bottom: 1px solid #333;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    #search-bar.active {
+        display: flex;
+    }
+
+    #search-bar input {
+        background: #050505;
+        border: 1px solid #444;
+        padding: 4px 8px;
+        font-size: 13px;
+        max-width: 200px;
+    }
+
+    #search-bar span {
+        font-size: 12px;
+        color: #888;
+        margin-right: auto;
+    }
+
+    #search-bar button {
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+
+    textarea {
+        width: 100%;
+        height: 100%;
+        background: #000;
+        color: #00ff9d;
+        border: none;
+        outline: none;
+        padding: 10px;
+        resize: none;
+        box-sizing: border-box;
+        font-family: monospace;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: white;
+    }
+
+    #status {
+        font-size: 12px;
+        color: #aaa;
+        padding: 5px 10px;
+        border-top: 1px solid #222;
+        background: #111;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .label {
+        font-size: 11px;
+        color: #888;
+        margin: 5px 10px;
+    }
+
+    /* Embedded warning overlay inside preview */
+    #iframe-warning {
+        display: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 15, 15, 0.95);
+        color: #fff;
+        padding: 20px;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        z-index: 10;
+        border: 2px solid #ff4a4a;
+        margin: 10px;
+        border-radius: 4px;
+    }
+
+    #iframe-warning h3 {
+        color: #ff4a4a;
+        margin-top: 0;
+    }
+
+    #iframe-warning p {
+        font-size: 13px;
+        color: #ccc;
+        max-width: 400px;
+        line-height: 1.5;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        #mobile-tabs {
+            display: flex;
+        }
+
+        #container {
+            position: relative;
+        }
+
+        #left, #right {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-right: none;
+        }
+
+        #left.hidden, #right.hidden {
+            display: none !important;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div id="topbar">
+    <div class="top-row">
+        <input id="url" placeholder="Enter URL (https://example.com)" value="https://example.com" />
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <button onclick="loadSite()">Inspect</button>
+        <button onclick="applyEdit()">Apply Code</button>
+        <!-- Mobile/Desktop Friendly Search Button -->
+        <button class="secondary" onclick="toggleSearchBar()" title="Find in code (Ctrl+F)">🔍 Find</button>
+    </div>
+</div>
+
+<!-- Mobile Tab Bar (Visible on mobile/tablet screens only) -->
+<div id="mobile-tabs">
+    <button id="tab-code" class="active" onclick="switchTab('code')">Code Editor</button>
+    <button id="tab-preview" onclick="switchTab('preview')">Live Preview</button>
+</div>
+
+<div id="container">
+    <div id="left">
+        <div class="label">HTML CODE (editable sandbox copy)</div>
+        
+        <!-- Ctrl+F Mobile/Desktop Search Widget -->
+        <div id="search-bar">
+            <input id="search-input" placeholder="Search in code..." oninput="performSearch()" />
+            <button class="secondary" onclick="navigateSearch(-1)">◀ Prev</button>
+            <button class="secondary" onclick="navigateSearch(1)">Next ▶</button>
+            <span id="search-results">Matches: 0 / 0</span>
+            <button style="background: #ff4a4a; color: white;" onclick="toggleSearchBar(false)">Close</button>
+        </div>
+
+        <textarea id="code" placeholder="Site code will appear here..."></textarea>
+    </div>
+
+    <div id="right">
+        <!-- Container for iframe allowing warnings overlays if iframe loading fails or gets blocked -->
+        <iframe id="frame"></iframe>
+        
+        <div id="iframe-warning">
+            <h3>Iframe Blocked (X-Frame-Options/CSP) ❌</h3>
+            <p>This website prevents direct embedding in other webpages using security headers. If the preview panel above remains blank, you can try opening the link in a new window or using Proxy Sandbox Mode.</p>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button onclick="openOriginalUrl()">Open Direct Link ↗</button>
+                <button class="secondary" onclick="tryLoadViaProxy()">Try Proxy Sandbox</button>
+                <button class="secondary" style="border-color: #aaa; color: #aaa;" onclick="dismissWarning()">Dismiss</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="status">
+    <span id="status-text">Ready.</span>
+    <span style="font-size: 11px; opacity: 0.7;">Tip: Press Ctrl+F to search code</span>
+</div>
+
+<script>
+let currentMode = "sandbox";
+let lastLoadedUrl = "";
+
+// Ctrl + F Trigger handler
+window.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        toggleSearchBar(true);
+    }
+});
+
+function switchTab(target) {
+    const tabCode = document.getElementById("tab-code");
+    const tabPreview = document.getElementById("tab-preview");
+    const leftPanel = document.getElementById("left");
+    const rightPanel = document.getElementById("right");
+
+    if (target === 'code') {
+        tabCode.classList.add("active");
+        tabPreview.classList.remove("active");
+        leftPanel.classList.remove("hidden");
+        rightPanel.classList.add("hidden");
+    } else {
+        tabCode.classList.remove("active");
+        tabPreview.classList.add("active");
+        leftPanel.classList.add("hidden");
+        rightPanel.classList.remove("hidden");
+    }
+}
+
+// Initial state for mobile
+if (window.innerWidth <= 768) {
+    switchTab('code');
+}
+
+// Watch resize event to reset state if rotating to portrait/landscape
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+        document.getElementById("left").classList.remove("hidden");
+        document.getElementById("right").classList.remove("hidden");
+    } else {
+        const isPreviewActive = document.getElementById("tab-preview").classList.contains("active");
+        switchTab(isPreviewActive ? 'preview' : 'code');
+    }
+});
+
+async function loadSite() {
+    let url = document.getElementById("url").value.trim();
+    const frame = document.getElementById("frame");
+    const codeBox = document.getElementById("code");
+    const status = document.getElementById("status-text");
+
+    if (!url) return;
+
+    // Ensure scheme is present
+    if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url;
+        document.getElementById("url").value = url;
+    }
+
+    lastLoadedUrl = url;
+    status.innerText = "Loading...";
+    dismissWarning();
+
+    try {
+        // Try direct fetch of HTML (ONLY works if CORS is configured on the target site)
+        const res = await fetch(url, { mode: "cors" });
+        const html = await res.text();
+
+        codeBox.value = html;
+        frame.srcdoc = html;
+
+        currentMode = "editable-copy";
+        status.innerText = "Loaded via CORS (editable sandbox copy).";
+
+    } catch (e) {
+        console.warn("Direct CORS access failed. Trying secondary CORS Proxy load...");
+        
+        // Attempting Proxy loading fallback to read HTML code and write via srcdoc (bypassing both CORS & X-Frame-Options)
+        try {
+            status.innerText = "Direct access blocked. Trying CORS Proxy bypass...";
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            const res = await fetch(proxyUrl);
+            if (!res.ok) throw new Error("Proxy error");
+            const html = await res.text();
+
+            codeBox.value = html;
+            frame.srcdoc = html;
+            currentMode = "editable-copy";
+            status.innerText = "Loaded via Proxy Sandbox (bypassed embedding restrictions).";
+        } catch (proxyError) {
+            // Fallback: iframe only (browser will load directly, but may block based on X-Frame-Options)
+            frame.removeAttribute("srcdoc");
+            frame.src = url;
+            
+            codeBox.value =
+`// CORS BLOCKED ❌
+// This site does not allow reading its HTML code directly.
+//
+// You can still:
+// - View it in the live preview (right side)
+// - Paste modified HTML here manually
+// - Recreate a sandbox version from scratch
+
+console.log("Direct access to HTML code is protected by browser policies.");`;
+
+            currentMode = "iframe-only";
+            status.innerText = "CORS blocked. Direct iframe rendering.";
+            
+            // Show custom warning overlay inside preview view in case X-Frame-Options blocks iframe loading
+            showIframeWarning();
+        }
+    }
+}
+
+function applyEdit() {
+    const frame = document.getElementById("frame");
+    const code = document.getElementById("code");
+    const status = document.getElementById("status-text");
+
+    dismissWarning();
+    
+    // Always apply edits via srcdoc to guarantee responsive live editing of the code on display
+    frame.removeAttribute("src");
+    frame.srcdoc = code.value;
+    
+    if (currentMode === "iframe-only") {
+        status.innerText = "Applied edits to sandbox (not original site).";
+    } else {
+        status.innerText = "Live sandbox updated.";
+    }
+}
+
+/* SMART IFRAME SECURITY FALLBACKS */
+function showIframeWarning() {
+    const warning = document.getElementById("iframe-warning");
+    warning.style.display = "flex";
+}
+
+function dismissWarning() {
+    const warning = document.getElementById("iframe-warning");
+    warning.style.display = "none";
+}
+
+function openOriginalUrl() {
+    if (lastLoadedUrl) {
+        window.open(lastLoadedUrl, '_blank');
+    }
+}
+
+async function tryLoadViaProxy() {
+    if (!lastLoadedUrl) return;
+    dismissWarning();
+    const codeBox = document.getElementById("code");
+    const frame = document.getElementById("frame");
+    const status = document.getElementById("status-text");
+    
+    status.innerText = "Loading using Proxy Bypass...";
+    
+    try {
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(lastLoadedUrl)}`;
+        const res = await fetch(proxyUrl);
+        const html = await res.text();
+
+        codeBox.value = html;
+        frame.removeAttribute("src");
+        frame.srcdoc = html;
+        currentMode = "editable-copy";
+        status.innerText = "Loaded via Proxy Sandbox successfully.";
+    } catch (e) {
+        status.innerText = "Proxy failed as well. Try a different URL.";
+    }
+}
+
+
+/* 🔍 SEARCH TOOLBAR (Ctrl + F & Mobile Search) */
+let searchMatches = [];
+let currentSearchIndex = -1;
+
+function toggleSearchBar(forceState) {
+    const searchBar = document.getElementById("search-bar");
+    const isCurrentlyActive = searchBar.classList.contains("active");
+    const show = (forceState !== undefined) ? forceState : !isCurrentlyActive;
+    
+    if (show) {
+        searchBar.classList.add("active");
+        const searchInput = document.getElementById("search-input");
+        searchInput.focus();
+        searchInput.select();
+        performSearch();
+    } else {
+        searchBar.classList.remove("active");
+        // Clear selection range in code textarea
+        const textarea = document.getElementById("code");
+        textarea.setSelectionRange(0, 0);
+    }
+}
+
+function performSearch() {
+    const query = document.getElementById("search-input").value.toLowerCase();
+    const text = document.getElementById("code").value.toLowerCase();
+    const resultsCounter = document.getElementById("search-results");
+    
+    searchMatches = [];
+    currentSearchIndex = -1;
+    
+    if (!query) {
+        resultsCounter.innerText = "Matches: 0 / 0";
+        return;
+    }
+    
+    let index = text.indexOf(query);
+    while (index !== -1) {
+        searchMatches.push({
+            start: index,
+            end: index + query.length
+        });
+        index = text.indexOf(query, index + 1);
+    }
+    
+    if (searchMatches.length > 0) {
+        currentSearchIndex = 0;
+        highlightMatch();
+    } else {
+        resultsCounter.innerText = "Matches: 0 / 0";
+    }
+}
+
+function highlightMatch() {
+    if (currentSearchIndex < 0 || currentSearchIndex >= searchMatches.length) return;
+    
+    const textarea = document.getElementById("code");
+    const match = searchMatches[currentSearchIndex];
+    const resultsCounter = document.getElementById("search-results");
+    
+    textarea.focus();
+    textarea.setSelectionRange(match.start, match.end);
+    
+    // Scroll selection into visual range inside textarea
+    const textBefore = textarea.value.substring(0, match.start);
+    const lines = textBefore.split('\n').length;
+    const lineHeight = 19.6; // average line height for monospace 14px
+    textarea.scrollTop = (lines * lineHeight) - (textarea.clientHeight / 2);
+    
+    resultsCounter.innerText = `Matches: ${currentSearchIndex + 1} / ${searchMatches.length}`;
+}
+
+function navigateSearch(direction) {
+    if (searchMatches.length === 0) return;
+    
+    currentSearchIndex += direction;
+    if (currentSearchIndex < 0) {
+        currentSearchIndex = searchMatches.length - 1;
+    } else if (currentSearchIndex >= searchMatches.length) {
+        currentSearchIndex = 0;
+    }
+    
+    highlightMatch();
+}
+</script>
+
+</body>
+</html>
+
