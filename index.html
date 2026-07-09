@@ -3,6 +3,16 @@
 <head>
 <meta charset="UTF-8" />
 <title>Web Inspector Sandbox</title>
+<script>
+    if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('Service Worker registrado correctamente'))
+      .catch(err => console.log('Error al registrar:', err));
+  }
+</script>
+
+<!-- No olvides vincular el manifest en el <head> -->
+<link rel="manifest" href="manifest.json">    
 <style>
     body {
         margin: 0;
