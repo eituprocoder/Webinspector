@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Web Inspector Sandbox</title>
-<script>
+    <script>
     if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
       .then(() => console.log('Service Worker registrado correctamente'))
@@ -12,168 +13,939 @@
 </script>
 
 <!-- No olvides vincular el manifest en el <head> -->
-<link rel="manifest" href="manifest.json">    
+<link rel="manifest" href="manifest.json">
 <style>
+    * {
+        box-sizing: border-box;
+    }
+
     body {
         margin: 0;
-        font-family: monospace;
-        background: #0f0f0f;
+        font-family: 'Fira Code', 'Cascadia Code', Consolas, Monaco, monospace;
+        background: #0d1117;
         color: #00ff9d;
         display: flex;
         flex-direction: column;
         height: 100vh;
-    }
-
-    #topbar {
-        display: flex;
-        padding: 10px;
-        background: #111;
-        gap: 10px;
-        border-bottom: 1px solid #222;
-    }
-
-    input {
-        flex: 1;
-        padding: 8px;
-        background: #000;
-        color: #00ff9d;
-        border: 1px solid #333;
-        outline: none;
-    }
-
-    button {
-        padding: 8px 12px;
-        background: #00ff9d;
-        border: none;
-        cursor: pointer;
-        font-weight: bold;
-    }
-
-    #container {
-        display: flex;
-        flex: 1;
         overflow: hidden;
     }
 
-    #left, #right {
+    /* Top Bar Styling */
+    #topbar {
+        display: flex;
+        flex-wrap: wrap;
+        padding: 8px 12px;
+        background: #161b22;
+        gap: 8px;
+        align-items: center;
+        border-bottom: 1px solid #30363d;
+        z-index: 10;
+    }
+
+    .input-group {
+        display: flex;
         flex: 1;
-        overflow: auto;
-        border-right: 1px solid #222;
+        min-width: 250px;
+        gap: 6px;
     }
 
-    #right {
-        border-right: none;
+    input[type="text"] {
+        flex: 1;
+        padding: 8px 12px;
+        background: #0d1117;
+        color: #58a6ff;
+        border: 1px solid #30363d;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 13px;
+        outline: none;
     }
 
-    textarea {
-        width: 100%;
+    input[type="text"]:focus {
+        border-color: #58a6ff;
+        box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+    }
+
+    .button-group {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+    }
+
+    button {
+        padding: 7px 12px;
+        background: #21262d;
+        color: #c9d1d9;
+        border: 1px solid #30363d;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 12px;
+        font-family: inherit;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.15s ease;
+        user-select: none;
+    }
+
+    button:hover {
+        background: #30363d;
+        color: #ffffff;
+        border-color: #8b949e;
+    }
+
+    button:active {
+        transform: translateY(1px);
+    }
+
+    button.primary {
+        background: #238636;
+        color: #ffffff;
+        border-color: #2ea043;
+    }
+
+    button.primary:hover {
+        background: #2ea043;
+    }
+
+    button.active {
+        background: #1f6feb;
+        color: #ffffff;
+        border-color: #388bfd;
+    }
+
+    button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .badge {
+        background: #da3633;
+        color: white;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: bold;
+    }
+
+    /* Main Content Container */
+    #main-container {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* Code Panel */
+    #left-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #30363d;
+        background: #0d1117;
+        min-width: 0;
+        transition: flex 0.2s ease;
+    }
+
+    #left-panel.hidden {
+        display: none !important;
+    }
+
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 12px;
+        background: #161b22;
+        font-size: 11px;
+        color: #8b949e;
+        border-bottom: 1px solid #30363d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .editor-wrapper {
+        display: flex;
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .line-numbers {
+        width: 45px;
+        background: #090d11;
+        color: #484f58;
+        padding: 10px 6px 10px 0;
+        text-align: right;
+        font-size: 13px;
+        line-height: 1.5;
+        user-select: none;
+        overflow: hidden;
+        border-right: 1px solid #21262d;
+    }
+
+    textarea#code {
+        flex: 1;
         height: 100%;
-        background: #000;
-        color: #00ff9d;
+        background: #0d1117;
+        color: #e6edf3;
         border: none;
         outline: none;
         padding: 10px;
         resize: none;
+        font-family: inherit;
+        font-size: 13px;
+        line-height: 1.5;
+        white-space: pre;
+        overflow-x: auto;
+        overflow-y: scroll;
+        tab-size: 2;
     }
 
-    iframe {
+    /* Iframe / Preview Panel */
+    #right-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #ffffff;
+        min-width: 0;
+        position: relative;
+    }
+
+    #right-panel.hidden {
+        display: none !important;
+    }
+
+    iframe#frame {
         width: 100%;
         height: 100%;
         border: none;
-        background: white;
+        background: #ffffff;
     }
 
-    #status {
-        font-size: 12px;
-        color: #aaa;
-        padding: 5px 10px;
-        border-top: 1px solid #222;
+    /* JS Console Panel */
+    #console-panel {
+        height: 180px;
+        background: #0d1117;
+        border-top: 2px solid #30363d;
+        display: flex;
+        flex-direction: column;
+        transition: height 0.2s ease;
     }
 
-    .label {
+    #console-panel.collapsed {
+        height: 0;
+        overflow: hidden;
+        border-top: none;
+    }
+
+    .console-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 10px;
+        background: #161b22;
+        border-bottom: 1px solid #21262d;
+    }
+
+    .console-title {
         font-size: 11px;
-        color: #888;
-        margin-bottom: 5px;
+        font-weight: bold;
+        color: #8b949e;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .console-actions {
+        display: flex;
+        gap: 6px;
+    }
+
+    .console-actions button {
+        padding: 3px 8px;
+        font-size: 11px;
+    }
+
+    #console-logs {
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .log-item {
+        padding: 3px 6px;
+        border-bottom: 1px solid #161b22;
+        display: flex;
+        gap: 8px;
+        word-break: break-all;
+    }
+
+    .log-item.log { color: #c9d1d9; }
+    .log-item.info { color: #58a6ff; }
+    .log-item.warn { color: #d29922; background: rgba(210, 153, 34, 0.08); }
+    .log-item.error { color: #f85149; background: rgba(248, 81, 73, 0.08); }
+    .log-item.result { color: #7ee787; }
+    .log-item.input { color: #a5d6ff; font-weight: bold; }
+
+    .log-time {
+        color: #484f58;
+        font-size: 10px;
+        min-width: 60px;
+    }
+
+    .console-input-container {
+        display: flex;
+        background: #090d11;
+        border-top: 1px solid #21262d;
+    }
+
+    .console-prompt {
+        padding: 6px 8px;
+        color: #58a6ff;
+        font-weight: bold;
+    }
+
+    #console-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: #e6edf3;
+        font-family: inherit;
+        font-size: 12px;
+        outline: none;
+        padding: 6px 0;
+    }
+
+    /* Modal for Assets Extractor */
+    #assets-modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.75);
+        z-index: 100;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+
+    .modal-content {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        width: 100%;
+        max-width: 700px;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid #30363d;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-body {
+        padding: 16px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .asset-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px;
+        background: #0d1117;
+        border: 1px solid #21262d;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        gap: 10px;
+    }
+
+    .asset-info {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+    }
+
+    .asset-tag {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+
+    .tag-img { background: #1f6feb; color: white; }
+    .tag-audio { background: #238636; color: white; }
+    .tag-video { background: #8957e5; color: white; }
+
+    /* Bottom Status Bar */
+    #status-bar {
+        font-size: 11px;
+        color: #8b949e;
+        padding: 4px 12px;
+        background: #161b22;
+        border-top: 1px solid #30363d;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .status-left {
+        display: flex;
+        gap: 15px;
     }
 </style>
 </head>
 
 <body>
 
+<!-- Top Navigation Bar -->
 <div id="topbar">
-    <input id="url" placeholder="Enter URL (https://example.com)" />
-    <button onclick="loadSite()">Inspect</button>
-    <button onclick="applyEdit()">Apply Code</button>
-</div>
-
-<div id="container">
-    <div id="left">
-        <div class="label">HTML CODE (editable if allowed / sandboxed copy)</div>
-        <textarea id="code" placeholder="Site code will appear here..."></textarea>
+    <div class="input-group">
+        <input id="url" type="text" placeholder="Enter URL (e.g. https://example.com)" />
+        <button class="primary" onclick="loadSite()">Inspect</button>
     </div>
 
-    <div id="right">
-        <iframe id="frame"></iframe>
+    <div class="button-group">
+        <button onclick="applyEdit()" title="Apply modified code to live preview">⚡ Apply Code</button>
+        <button id="btn-undo" onclick="undo()" title="Undo (Ctrl+Z)">↩ Undo</button>
+        <button id="btn-redo" onclick="redo()" title="Redo (Ctrl+Y)">↪ Redo</button>
+    </div>
+
+    <div class="button-group">
+        <button id="btn-toggle-code" onclick="toggleCodePanel()" class="active" title="Toggle Code Editor Visibility">👁️ Code</button>
+        <button id="btn-toggle-preview" onclick="togglePreviewPanel()" class="active" title="Toggle Live Preview Visibility">📱 Preview</button>
+        <button id="btn-toggle-console" onclick="toggleConsole()" title="Toggle JS Console">💬 Console <span id="error-badge" class="badge" style="display:none;">0</span></button>
+        <button onclick="openAssetsModal()" title="View external images, audio, video files">🖼️ Media Files</button>
     </div>
 </div>
 
-<div id="status">Ready.</div>
+<!-- Main Container Split View -->
+<div id="main-container">
+    <!-- Code Editor Section -->
+    <div id="left-panel">
+        <div class="panel-header">
+            <span>HTML / CSS / JS Source Code</span>
+            <span id="line-info">Lines: 1 | Chars: 0</span>
+        </div>
+        <div class="editor-wrapper">
+            <div id="line-numbers" class="line-numbers">1</div>
+            <textarea id="code" spellcheck="false" wrap="off" placeholder="Inspected site code will render here..."></textarea>
+        </div>
+    </div>
+
+    <!-- Live Preview Frame Section -->
+    <div id="right-panel">
+        <div class="panel-header" style="background:#f6f8fa; color:#57606a; border-bottom:1px solid #d0d7de;">
+            <span>Live Interactive Render Box</span>
+            <span id="mode-indicator">Mode: Sandbox</span>
+        </div>
+        <iframe id="frame" sandbox="allow-scripts allow-same-origin allow-forms allow-modals"></iframe>
+    </div>
+</div>
+
+<!-- JS Console Panel -->
+<div id="console-panel" class="collapsed">
+    <div class="console-header">
+        <div class="console-title">
+            <span>JavaScript Console</span>
+            <select id="console-filter" onchange="filterConsoleLogs()" style="background:#0d1117; color:#c9d1d9; border:1px solid #30363d; font-size:11px; padding:2px 4px; border-radius:3px;">
+                <option value="all">All Logs</option>
+                <option value="log">Logs</option>
+                <option value="warn">Warnings</option>
+                <option value="error">Errors</option>
+            </select>
+        </div>
+        <div class="console-actions">
+            <button onclick="clearConsole()">Clear</button>
+            <button onclick="toggleConsole()">✖ Close</button>
+        </div>
+    </div>
+    <div id="console-logs"></div>
+    <div class="console-input-container">
+        <span class="console-prompt">&gt;</span>
+        <input id="console-input" type="text" placeholder="Evaluate JavaScript code in sandbox context..." onkeydown="handleConsoleInput(event)" />
+    </div>
+</div>
+
+<!-- Media Files Modal -->
+<div id="assets-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="margin:0; font-size:14px; color:#c9d1d9;">Inspected External Media Assets</h3>
+            <button onclick="closeAssetsModal()">✖</button>
+        </div>
+        <div id="assets-list" class="modal-body">
+            <!-- Discovered assets list here -->
+        </div>
+    </div>
+</div>
+
+<!-- Status Bar -->
+<div id="status-bar">
+    <div class="status-left">
+        <span id="status">Ready.</span>
+    </div>
+    <div>
+        <span>Web Inspector Sandbox v2.0</span>
+    </div>
+</div>
 
 <script>
 let currentMode = "sandbox";
+let currentBaseUrl = "";
+let errorCount = 0;
 
+// Undo / Redo History Stack State
+let historyStack = [];
+let historyIndex = -1;
+let isUndoRedoOperation = false;
+let historyDebounceTimer = null;
+
+// DOM Elements
+const codeBox = document.getElementById("code");
+const lineNumbers = document.getElementById("line-numbers");
+const frame = document.getElementById("frame");
+const statusEl = document.getElementById("status");
+const leftPanel = document.getElementById("left-panel");
+const rightPanel = document.getElementById("right-panel");
+const consolePanel = document.getElementById("console-panel");
+const consoleLogs = document.getElementById("console-logs");
+const errorBadge = document.getElementById("error-badge");
+const btnUndo = document.getElementById("btn-undo");
+const btnRedo = document.getElementById("btn-redo");
+
+// Initialization
+window.addEventListener("DOMContentLoaded", () => {
+    updateLineNumbers();
+    saveHistoryState(true);
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Line numbers & Undo history tracking
+    codeBox.addEventListener("input", () => {
+        updateLineNumbers();
+        updateLineInfo();
+        if (!isUndoRedoOperation) {
+            clearTimeout(historyDebounceTimer);
+            historyDebounceTimer = setTimeout(() => {
+                saveHistoryState();
+            }, 300);
+        }
+    });
+
+    // Sync scroll between textarea and line numbers
+    codeBox.addEventListener("scroll", () => {
+        lineNumbers.scrollTop = codeBox.scrollTop;
+    });
+
+    // Support Tab key inside textarea
+    codeBox.addEventListener("keydown", (e) => {
+        if (e.key === "Tab") {
+            e.preventDefault();
+            const start = codeBox.selectionStart;
+            const end = codeBox.selectionEnd;
+            codeBox.value = codeBox.value.substring(0, start) + "  " + codeBox.value.substring(end);
+            codeBox.selectionStart = codeBox.selectionEnd = start + 2;
+            updateLineNumbers();
+        }
+
+        // Shortcut Keys: Ctrl+Z / Cmd+Z, Ctrl+Y / Cmd+Shift+Z
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            if (e.shiftKey) {
+                redo();
+            } else {
+                undo();
+            }
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+            e.preventDefault();
+            redo();
+        }
+    });
+
+    // Intercept Console Messages from iFrame Sandbox
+    window.addEventListener("message", (event) => {
+        if (event.data && event.data.type === "INSPECTOR_CONSOLE") {
+            addConsoleLog(event.data.level, event.data.args);
+        }
+    });
+}
+
+/* ==========================================
+   1. LOAD SITE & RELATIVE ASSETS RESOLUTION
+   ========================================== */
 async function loadSite() {
-    const url = document.getElementById("url").value;
-    const frame = document.getElementById("frame");
-    const codeBox = document.getElementById("code");
-    const status = document.getElementById("status");
-
+    let url = document.getElementById("url").value.trim();
     if (!url) return;
 
-    status.innerText = "Loading...";
+    if (!/^https?:\/\//i.test(url)) {
+        url = "https://" + url;
+        document.getElementById("url").value = url;
+    }
 
     try {
-        // Try fetching HTML (ONLY works if CORS allows it)
+        const parsedUrl = new URL(url);
+        currentBaseUrl = parsedUrl.origin + parsedUrl.pathname;
+        if (!currentBaseUrl.endsWith('/')) {
+            currentBaseUrl = currentBaseUrl.substring(0, currentBaseUrl.lastIndexOf('/') + 1);
+        }
+    } catch (e) {
+        currentBaseUrl = url;
+    }
+
+    statusEl.innerText = "Fetching site code...";
+    clearConsole();
+
+    try {
+        // Fetch site HTML directly via CORS mode
         const res = await fetch(url, { mode: "cors" });
         const html = await res.text();
 
         codeBox.value = html;
-        frame.srcdoc = html;
-
         currentMode = "editable-copy";
-        status.innerText = "Loaded via CORS (editable sandbox copy).";
+        document.getElementById("mode-indicator").innerText = "Mode: CORS Sandbox Copy";
+        statusEl.innerText = "Loaded site successfully via CORS mode.";
 
+        applyEdit();
     } catch (e) {
-        // Fallback: iframe only (no code access)
+        // CORS Fallback Mode
         frame.src = url;
-        codeBox.value =
-`// CORS BLOCKED ❌
-// This site does not allow reading its HTML.
-//
-// You can still:
- // - View it in the iframe (right side)
- // - Paste modified HTML here manually
- // - Or recreate a sandbox version
+        codeBox.value = 
+`<!-- CORS BLOCKED ❌
+This site does not allow direct HTML fetching due to browser security restrictions.
 
-console.log("No access due to browser security rules.");`;
+You can still:
+1. Inspect & view the live page in the preview pane (right).
+2. Paste or write custom HTML/CSS/JS code here to test in sandbox.
+3. Media assets and scripts relative to target site are supported.
+-->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: sans-serif; padding: 2rem; text-align: center; background: #f0f2f5; }
+        h2 { color: #d93025; }
+        p { color: #5f6368; }
+    </style>
+</head>
+<body>
+    <h2>CORS Policy Restriction</h2>
+    <p>Target site <b>${url}</b> restricts cross-origin source inspection.</p>
+    <p>You can edit this HTML sandbox directly or try another URL!</p>
+</body>
+</html>`;
 
         currentMode = "iframe-only";
-        status.innerText = "CORS blocked. Running iframe-only mode.";
+        document.getElementById("mode-indicator").innerText = "Mode: iFrame Live View";
+        statusEl.innerText = "CORS restricted. Running fallback iframe preview mode.";
+    }
+
+    updateLineNumbers();
+    updateLineInfo();
+    saveHistoryState(true);
+}
+
+/* Prepare HTML with Base Tag and Console Hook Script */
+function injectSandboxScript(rawHtml) {
+    let html = rawHtml;
+
+    // Inject <base> tag to resolve relative images, audio, video, css, scripts
+    const baseTag = `<base href="${currentBaseUrl || ''}">`;
+
+    // Script to intercept console logs and uncaught errors in sandbox
+    const consoleHookScript = `
+    <script>
+    (function() {
+        function serialize(arg) {
+            if (arg === undefined) return 'undefined';
+            if (arg === null) return 'null';
+            if (typeof arg === 'function') return arg.toString();
+            if (typeof arg === 'object') {
+                try { return JSON.stringify(arg); } catch(e) { return String(arg); }
+            }
+            return String(arg);
+        }
+
+        function sendLog(type, args) {
+            try {
+                const cleanArgs = Array.from(args).map(serialize);
+                window.parent.postMessage({
+                    type: 'INSPECTOR_CONSOLE',
+                    level: type,
+                    args: cleanArgs
+                }, '*');
+            } catch(e) {}
+        }
+
+        const _log = console.log, _warn = console.warn, _error = console.error, _info = console.info;
+        console.log = function(...args) { _log.apply(console, args); sendLog('log', args); };
+        console.warn = function(...args) { _warn.apply(console, args); sendLog('warn', args); };
+        console.error = function(...args) { _error.apply(console, args); sendLog('error', args); };
+        console.info = function(...args) { _info.apply(console, args); sendLog('info', args); };
+
+        window.addEventListener('error', function(e) {
+            sendLog('error', [e.message + ' (' + e.filename + ':' + e.lineno + ')']);
+        });
+    })();
+    <\/script>
+    `;
+
+    if (html.includes("<head>")) {
+        return html.replace("<head>", "<head>" + baseTag + consoleHookScript);
+    } else if (html.includes("<html>")) {
+        return html.replace("<html>", "<html><head>" + baseTag + consoleHookScript + "</head>");
+    } else {
+        return "<head>" + baseTag + consoleHookScript + "</head>" + html;
     }
 }
 
 function applyEdit() {
-    const frame = document.getElementById("frame");
-    const code = document.getElementById("code");
-    const status = document.getElementById("status");
+    const rawCode = codeBox.value;
+    const processedCode = injectSandboxScript(rawCode);
 
-    if (currentMode === "iframe-only") {
-        frame.srcdoc = code.value;
-        status.innerText = "Applied edits to sandbox (not original site).";
-    } else {
-        frame.srcdoc = code.value;
-        status.innerText = "Live sandbox updated.";
+    frame.srcdoc = processedCode;
+    statusEl.innerText = "Applied updated code to live sandbox preview.";
+}
+
+/* ==========================================
+   2. UNDO & REDO SYSTEM
+   ========================================== */
+function saveHistoryState(force = false) {
+    const currentCode = codeBox.value;
+    if (historyIndex >= 0 && historyStack[historyIndex] === currentCode) return;
+
+    // Truncate any forward redo states
+    historyStack = historyStack.slice(0, historyIndex + 1);
+    historyStack.push(currentCode);
+    historyIndex = historyStack.length - 1;
+
+    updateUndoRedoButtons();
+}
+
+function undo() {
+    if (historyIndex > 0) {
+        historyIndex--;
+        isUndoRedoOperation = true;
+        codeBox.value = historyStack[historyIndex];
+        updateLineNumbers();
+        updateLineInfo();
+        isUndoRedoOperation = false;
+        updateUndoRedoButtons();
+        statusEl.innerText = "Undo action performed.";
     }
+}
+
+function redo() {
+    if (historyIndex < historyStack.length - 1) {
+        historyIndex++;
+        isUndoRedoOperation = true;
+        codeBox.value = historyStack[historyIndex];
+        updateLineNumbers();
+        updateLineInfo();
+        isUndoRedoOperation = false;
+        updateUndoRedoButtons();
+        statusEl.innerText = "Redo action performed.";
+    }
+}
+
+function updateUndoRedoButtons() {
+    btnUndo.disabled = historyIndex <= 0;
+    btnRedo.disabled = historyIndex >= historyStack.length - 1;
+}
+
+/* ==========================================
+   3. LINE NUMBERING SYSTEM
+   ========================================== */
+function updateLineNumbers() {
+    const lines = codeBox.value.split("\n").length;
+    let numbersHtml = "";
+    for (let i = 1; i <= lines; i++) {
+        numbersHtml += i + "\n";
+    }
+    lineNumbers.textContent = numbersHtml;
+}
+
+function updateLineInfo() {
+    const text = codeBox.value;
+    const lines = text.split("\n").length;
+    const chars = text.length;
+    document.getElementById("line-info").innerText = `Lines: ${lines} | Chars: ${chars}`;
+}
+
+/* ==========================================
+   4. TOGGLE CODE / PREVIEW PANELS
+   ========================================== */
+function toggleCodePanel() {
+    const btn = document.getElementById("btn-toggle-code");
+    leftPanel.classList.toggle("hidden");
+    btn.classList.toggle("active");
+}
+
+function togglePreviewPanel() {
+    const btn = document.getElementById("btn-toggle-preview");
+    rightPanel.classList.toggle("hidden");
+    btn.classList.toggle("active");
+}
+
+/* ==========================================
+   5. JS CONSOLE SYSTEM
+   ========================================== */
+function toggleConsole() {
+    consolePanel.classList.toggle("collapsed");
+}
+
+function clearConsole() {
+    consoleLogs.innerHTML = "";
+    errorCount = 0;
+    updateErrorBadge();
+}
+
+function addConsoleLog(level, args) {
+    if (level === "error") {
+        errorCount++;
+        updateErrorBadge();
+    }
+
+    const item = document.createElement("div");
+    item.className = `log-item ${level}`;
+    
+    const timeSpan = document.createElement("span");
+    timeSpan.className = "log-time";
+    timeSpan.innerText = new Date().toLocaleTimeString();
+
+    const messageSpan = document.createElement("span");
+    messageSpan.innerText = Array.isArray(args) ? args.join(" ") : args;
+
+    item.appendChild(timeSpan);
+    item.appendChild(messageSpan);
+    consoleLogs.appendChild(item);
+    consoleLogs.scrollTop = consoleLogs.scrollHeight;
+}
+
+function updateErrorBadge() {
+    if (errorCount > 0) {
+        errorBadge.style.display = "inline-block";
+        errorBadge.innerText = errorCount;
+    } else {
+        errorBadge.style.display = "none";
+    }
+}
+
+function handleConsoleInput(e) {
+    if (e.key === "Enter") {
+        const input = document.getElementById("console-input");
+        const command = input.value.trim();
+        if (!command) return;
+
+        addConsoleLog("input", ["> " + command]);
+        input.value = "";
+
+        try {
+            let result;
+            if (frame.contentWindow) {
+                result = frame.contentWindow.eval(command);
+            } else {
+                result = eval(command);
+            }
+            addConsoleLog("result", ["< " + result]);
+        } catch (err) {
+            addConsoleLog("error", [err.message]);
+        }
+    }
+}
+
+function filterConsoleLogs() {
+    const filter = document.getElementById("console-filter").value;
+    const items = consoleLogs.querySelectorAll(".log-item");
+    items.forEach(item => {
+        if (filter === "all") {
+            item.style.display = "flex";
+        } else if (item.classList.contains(filter)) {
+            item.style.display = "flex";
+        } else {
+            item.style.display = "none";
+        }
+    });
+}
+
+/* ==========================================
+   MEDIA / ASSETS INSPECTOR MODAL
+   ========================================== */
+function openAssetsModal() {
+    const modal = document.getElementById("assets-modal");
+    const container = document.getElementById("assets-list");
+    container.innerHTML = "";
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(codeBox.value, "text/html");
+
+    const mediaList = [];
+
+    // Images
+    doc.querySelectorAll("img").forEach(img => {
+        const src = img.getAttribute("src");
+        if (src) mediaList.push({ type: "image", tag: "img", url: resolveUrl(src) });
+    });
+
+    // Audio
+    doc.querySelectorAll("audio, audio source").forEach(audio => {
+        const src = audio.getAttribute("src");
+        if (src) mediaList.push({ type: "audio", tag: "audio", url: resolveUrl(src) });
+    });
+
+    // Video
+    doc.querySelectorAll("video, video source").forEach(video => {
+        const src = video.getAttribute("src");
+        if (src) mediaList.push({ type: "video", tag: "video", url: resolveUrl(src) });
+    });
+
+    if (mediaList.length === 0) {
+        container.innerHTML = `<p style="color:#8b949e; text-align:center;">No audio, video, or image media assets found in current HTML source.</p>`;
+    } else {
+        mediaList.forEach(asset => {
+            const div = document.createElement("div");
+            div.className = "asset-item";
+
+            const tagClass = asset.type === "image" ? "tag-img" : asset.type === "audio" ? "tag-audio" : "tag-video";
+
+            div.innerHTML = `
+                <span class="asset-tag ${tagClass}">${asset.type}</span>
+                <span class="asset-info" title="${asset.url}">${asset.url}</span>
+                <a href="${asset.url}" target="_blank" style="color:#58a6ff; text-decoration:none; font-size:11px; font-weight:bold;">Open ↗</a>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    modal.style.display = "flex";
+}
+
+function resolveUrl(relative) {
+    try {
+        return new URL(relative, currentBaseUrl || window.location.href).href;
+    } catch (e) {
+        return relative;
+    }
+}
+
+function closeAssetsModal() {
+    document.getElementById("assets-modal").style.display = "none";
 }
 </script>
 
